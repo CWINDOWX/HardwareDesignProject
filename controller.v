@@ -31,6 +31,7 @@ module controller(
 	output wire memtoregE,alusrcE,
 	output wire regdstE,regwriteE,	
 	output wire[2:0] alucontrolE,
+	output wire hassignE,    // 判断是不是有符号的计算
 
 	//mem stage
 	output wire memtoregM,memwriteM,
@@ -45,6 +46,7 @@ module controller(
 	wire memtoregD,memwriteD,alusrcD,
 		regdstD,regwriteD;
 	wire[2:0] alucontrolD;
+	wire hassign_md,hassign_ad,hassignD;
 
 	//execute stage
 	wire memwriteE;
@@ -55,19 +57,21 @@ module controller(
 		branchD,alusrcD,
 		regdstD,regwriteD,
 		jumpD,
-		aluopD
+		aluopD,
+		hassign_md
 		);
-	aludec ad(functD,aluopD,alucontrolD);
+	aludec ad(functD,aluopD,alucontrolD,hassign_ad);
 
+	assign hassignD = hassign_md | hassign_ad;
 	assign pcsrcD = branchD & equalD;
 
 	//pipeline registers
-	floprc #(8) regE(
+	floprc #(9) regE(
 		clk,
 		rst,
 		flushE,
-		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD},
-		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE}
+		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD},
+		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE}
 		);
 	flopr #(8) regM(
 		clk,rst,
