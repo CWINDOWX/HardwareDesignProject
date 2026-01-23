@@ -51,7 +51,7 @@ module alu(
             2'b01: y <= a | bout;
             2'b10: y <= s;
 
-            2'b11: begin    // 111做SLT，011做SLTU
+            2'b11: begin 
                 if(hassign) begin
                     y <= s[31] ^ ((~a[31] & b[31] & s[31] | a[31] & ~b[31] & ~s[31]));    // 不能直接用overflow，为了避免产生异常
                 end

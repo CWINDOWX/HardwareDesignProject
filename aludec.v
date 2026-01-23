@@ -61,7 +61,7 @@ module aludec(
                     hassign <= 1'b1;    
                 end
                 6'b101011: begin    //SLTU
-                    alucontrol <= 3'b011; //slt
+                    alucontrol <= 3'b111; //slt
                     hassign <= 1'b0;
                 end
                 6'b011000: begin    //MULT
