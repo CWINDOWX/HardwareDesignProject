@@ -36,6 +36,8 @@ module datapath(
 	input wire regwriteE,
 	input wire[2:0] alucontrolE,
 	input wire hassignE,    // 判断是不是有符号的计算
+	input wire hilo_enE,
+	input wire [1:0] hilo_mfE,
 	output wire flushE,
 	//mem stage
 	input wire memtoregM,
@@ -64,7 +66,8 @@ module datapath(
 	wire [4:0] writeregE;
 	wire [31:0] signimmE;
 	wire [31:0] srcaE,srca2E,srcbE,srcb2E,srcb3E;
-	wire [31:0] aluoutE;
+	wire [31:0] aluoutE,aluresult_loE,aluresultE;
+	wire [31:0] hi_outE,lo_outE;
 	//mem stage
 	wire [4:0] writeregM;
 	//writeback stage
@@ -135,8 +138,14 @@ module datapath(
 	mux3 #(32) forwardaemux(srcaE,resultW,aluoutM,forwardaE,srca2E);
 	mux3 #(32) forwardbemux(srcbE,resultW,aluoutM,forwardbE,srcb2E);
 	mux2 #(32) srcbmux(srcb2E,signimmE,alusrcE,srcb3E);
-	alu alu(srca2E,srcb3E,alucontrolE,hassignE,aluoutE);
+
+	alu alu(srca2E,srcb3E,alucontrolE,hassignE,aluresultE,aluresult_loE);
+
+	hilo_reg hilo_reg(clk,rst,hilo_enE,aluoutE,aluresult_loE,hi_outE,lo_outE);
+
 	mux2 #(5) wrmux(rtE,rdE,regdstE,writeregE);
+
+	mux3 #(32) aluoutmux(lo_outE,hi_outE,aluresultE,hilo_mfE,aluoutE);
 
 	//mem stage
 	flopr #(32) r1M(clk,rst,srcb2E,writedataM);
