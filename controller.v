@@ -32,7 +32,7 @@ module controller(
 	output wire regdstE,regwriteE,	
 	output wire[2:0] alucontrolE,
 	output wire hassignE,    // 判断是不是有符号的计算
-	output wire hilo_enE,
+	output wire [1:0] hilo_enE,
 	output wire [1:0] hilo_mfE,
 
 	//mem stage
@@ -49,7 +49,7 @@ module controller(
 		regdstD,regwriteD;
 	wire[2:0] alucontrolD;
 	wire hassign_md,hassign_ad,hassignD;
-	wire hilo_enD;
+	wire [1:0] hilo_enD;
 	wire [1:0] hilo_mfD;
 
 	//execute stage
@@ -70,7 +70,7 @@ module controller(
 	assign pcsrcD = branchD & equalD;
 
 	//pipeline registers
-	floprc #(12) regE(
+	floprc #(13) regE(
 		clk,
 		rst,
 		flushE,

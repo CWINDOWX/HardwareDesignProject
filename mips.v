@@ -34,7 +34,7 @@ module mips(
 			regwriteE,regwriteM,regwriteW;
 	wire [2:0] alucontrolE;
 	wire hassignE;
-	wire hilo_enE;
+	wire [1:0] hilo_enE;
 	wire [1:0] hilo_mfE;
 	wire flushE,equalD;
 

@@ -25,13 +25,13 @@ module aludec(
 	input wire[1:0] aluop,
 	output reg[2:0] alucontrol,
 	output reg hassign,
-    output reg hilo_en,
+    output reg[1:0] hilo_en,
     output reg[1:0] hilo_mf
     );
 	always @(*) begin
         hassign <= 1'b0;
-        hilo_en <= 1'b0;
-        hilo_mf <= 2'b10;
+        hilo_en <= 2'b10;   //10表示不写hilo寄存器，11表示写HI和LO，01表示写HI，00表示写LO
+        hilo_mf <= 2'b10;   //01表示HI写寄存器，00表示LO写寄存器
 		case (aluop)
 			2'b00: alucontrol <= 3'b010;//add (for lw/sw/addi/addiu)
 			2'b01: alucontrol <= 3'b110;//sub (for beq)
@@ -67,11 +67,11 @@ module aludec(
                 6'b011000: begin    //MULT
                     alucontrol <= 3'b100; //mult
                     hassign <= 1'b1;
-                    hilo_en <= 1'b1;
+                    hilo_en <= 2'b11;
                 end
                 6'b011001:begin     //MULTU
                     alucontrol <= 3'b100; //mult
-                    hilo_en <= 1'b1;
+                    hilo_en <= 2'b11;
                 end
                 6'b010000:begin     //MFHI
                     alucontrol <= 3'b000; //不做计算
@@ -80,6 +80,14 @@ module aludec(
                 6'b010010:begin     //MFLO
                     alucontrol <= 3'b000; //不做计算
                     hilo_mf <= 2'b00;      
+                end
+                6'b010001:begin     //MTHI
+                    alucontrol <= 3'b000;
+                    hilo_en <= 2'b01;
+                end
+                6'b010011:begin     //MTLO
+                    alucontrol <= 3'b000;
+                    hilo_en <= 2'b00;
                 end
                 default: begin 
                     alucontrol <= 3'b000;

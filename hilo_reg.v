@@ -21,7 +21,8 @@
 
 
 module hilo_reg(
-    input wire clk,rst,we,
+    input wire clk,rst,
+    input wire [1:0] we,
     input wire [31:0] hi_in,
     input wire [31:0] lo_in,
     output reg [31:0] hi_out,
@@ -32,10 +33,17 @@ module hilo_reg(
 		if(rst) begin
 			hi_out <= 32'b0;
             lo_out <= 32'b0;
-		end else if(we) begin
+		end 
+        else if(we == 2'b11) begin
 			hi_out <= hi_in;
             lo_out <= lo_in;
 		end
+        else if(we == 2'b01) begin
+            hi_out <= hi_in;
+        end
+        else if(we == 2'b00) begin
+            lo_out <= lo_in;
+        end
 	end
 
 endmodule
