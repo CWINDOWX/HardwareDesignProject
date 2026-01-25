@@ -12,8 +12,9 @@ module CP0_Reg (
     input         we,          // 写使能 <- MTC0
     input  [4:0]  addr,        // 寄存器地址
     input  [31:0] wdata,       // 写入数据
-    output [31:0] rdata,       // 读取数据 -> MFC0
+    output reg [31:0] rdata,       // 读取数据 -> MFC0
 
+    // verilator lint_off UNUSEDSIGNAL
     // 异常处理接口
     input         eret,        // ERET信号 <- Control
     input  [31:0] epc_i,       // EPC输入 <- 流水线(异常指令地址)
@@ -23,7 +24,7 @@ module CP0_Reg (
 
     // 输出接口
     output [31:0] epc_o,       // EPC输出 -> PC_Mux
-    output [4:0]  cause_o,     // 异常原因输出 (ExcCode字段)
+    output [5:0]  cause_o,     // 异常原因输出 (ExcCode字段)
     output        exception_o  // 异常发生信号 -> 流水线
 );
 
@@ -111,7 +112,7 @@ module CP0_Reg (
 
     // 输出信号
     assign epc_o = epc_reg;
-    assign cause_o = cause_reg[9:4];  // ExcCode字段
+    assign cause_o = cause_reg[5:0];  // ExcCode字段 (低6位)
     assign exception_o = exception;
 
 endmodule

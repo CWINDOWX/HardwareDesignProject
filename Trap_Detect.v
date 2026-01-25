@@ -9,6 +9,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 
+// verilator lint_off UNUSEDSIGNAL
 module Trap_Detect (
     input  [31:0] instr,        // 当前指令
     output       is_syscall,    // SYSCALL检测信号
