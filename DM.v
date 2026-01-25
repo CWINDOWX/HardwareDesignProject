@@ -4,6 +4,7 @@
 // Description: 数据存储器 - 支持字节/半字/字访存
 //////////////////////////////////////////////////////////////////////////////////
 
+// verilator lint_off UNUSEDSIGNAL
 module DM (
     input         clk,
     input         rst,
@@ -59,14 +60,24 @@ module DM (
         end
     end
 
+    // 读数据字节/半字选择逻辑
+    wire [7:0] byte_sel;
+    assign byte_sel = (addr_i[1:0] == 2'b00) ? rdata_raw[7:0] :
+                      (addr_i[1:0] == 2'b01) ? rdata_raw[15:8] :
+                      (addr_i[1:0] == 2'b10) ? rdata_raw[23:16] :
+                                               rdata_raw[31:24];
+
+    wire [15:0] halfword_sel;
+    assign halfword_sel = addr_i[1] ? rdata_raw[31:16] : rdata_raw[15:0];
+
     reg [31:0] rdata_ext;
     always @(*) begin
         case (mem_op_i)
-            3'b000: rdata_ext = rdata_raw;
-            3'b110: rdata_ext = {{24{rdata_raw[7]}}, rdata_raw[7:0]};
-            3'b111: rdata_ext = {24'b0, rdata_raw[7:0]};
-            3'b100: rdata_ext = {{16{rdata_raw[15]}}, rdata_raw[15:0]};
-            3'b101: rdata_ext = {16'b0, rdata_raw[15:0]};
+            3'b000: rdata_ext = rdata_raw;                                    // LW
+            3'b110: rdata_ext = {{24{byte_sel[7]}}, byte_sel};                // LB
+            3'b111: rdata_ext = {24'b0, byte_sel};                            // LBU
+            3'b100: rdata_ext = {{16{halfword_sel[15]}}, halfword_sel};       // LH
+            3'b101: rdata_ext = {16'b0, halfword_sel};                        // LHU
             default: rdata_ext = rdata_raw;
         endcase
     end
