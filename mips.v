@@ -36,6 +36,7 @@ module mips(
 	wire hassignE;
 	wire [1:0] hilo_enE;
 	wire [1:0] hilo_mfE;
+	wire divE;
 	wire flushE,equalD;
 
 	controller c(
@@ -48,7 +49,7 @@ module mips(
 		flushE,
 		memtoregE,alusrcE,
 		regdstE,regwriteE,	
-		alucontrolE,hassignE,hilo_enE,hilo_mfE,
+		alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,
 
 		//mem stage
 		memtoregM,memwriteM,
@@ -72,7 +73,7 @@ module mips(
 		regwriteE,
 		alucontrolE,
 		hassignE,
-		hilo_enE,hilo_mfE,
+		hilo_enE,hilo_mfE,divE,
 		flushE,
 		//mem stage
 		memtoregM,

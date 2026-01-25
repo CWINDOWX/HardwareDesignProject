@@ -38,6 +38,7 @@ module datapath(
 	input wire hassignE,    // 判断是不是有符号的计算
 	input wire [1:0] hilo_enE,
 	input wire [1:0] hilo_mfE,
+	input wire divE,
 	output wire flushE,
 	//mem stage
 	input wire memtoregM,
@@ -69,6 +70,8 @@ module datapath(
 	wire [31:0] aluoutE,aluresult_loE,aluresultE;
 	wire [31:0] hi_outE,lo_outE;
 	wire [31:0] hi_inE,lo_inE;
+	wire [31:0] qE,rE;	
+	wire divbusyE,divdoneE;
 	//mem stage
 	wire [4:0] writeregM;
 	//writeback stage
@@ -89,6 +92,7 @@ module datapath(
 		writeregE,
 		regwriteE,
 		memtoregE,
+		divE,divbusyE,
 		forwardaE,forwardbE,
 		flushE,
 		//mem stage
@@ -142,10 +146,12 @@ module datapath(
 
 	alu alu(srca2E,srcb3E,alucontrolE,hassignE,aluresultE,aluresult_loE);
 
-	mux2 #(32) hiinmux(srca2E,aluresultE,hilo_enE[1],hi_inE);
-	mux2 #(32) loinmux(srca2E,aluresult_loE,hilo_enE[1],lo_inE);
+	divider divider(clk,rst,divE,hassignE,srca2E,srcb3E,qE,rE,divbusyE,divdoneE);
 
-	hilo_reg hilo_reg(clk,rst,hilo_enE,hi_inE,lo_inE,hi_outE,lo_outE);	//写hi_lo寄存器堆，是在EX阶段做的
+	mux3 #(32) hiinmux(srca2E,aluresultE,rE,{divdoneE,hilo_enE[1]},hi_inE);
+	mux3 #(32) loinmux(srca2E,aluresult_loE,qE,{divdoneE,hilo_enE[1]},lo_inE);
+
+	hilo_reg hilo_reg(clk,rst,divdoneE,hilo_enE,hi_inE,lo_inE,hi_outE,lo_outE);	//写hi_lo寄存器堆，是在EX阶段做的
 
 	mux2 #(5) wrmux(rtE,rdE,regdstE,writeregE);
 
