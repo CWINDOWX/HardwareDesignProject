@@ -4,6 +4,7 @@
 // Description: 立即数扩展单元 - 支持符号扩展和零扩展
 //////////////////////////////////////////////////////////////////////////////////
 
+// verilator lint_off UNUSEDSIGNAL
 module ExtUnit (
     input  [15:0] imm,        // 16位立即数 <- 指令
     input  [1:0]  ext_type_i, // 扩展类型 <- Control/ID_EX_Reg
