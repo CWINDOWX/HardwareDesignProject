@@ -33,6 +33,8 @@ module hazard(
 	input wire[4:0] writeregE,
 	input wire regwriteE,
 	input wire memtoregE,
+	input wire divE,          // 除法指令
+	input wire divbusyE,      // 除法器忙碌
 	output reg[1:0] forwardaE,forwardbE,
 	output wire flushE,
 	//mem stage
@@ -45,12 +47,12 @@ module hazard(
 	input wire regwriteW
     );
 
-	wire lwstallD,branchstallD;
+	wire lwstallD,branchstallD,divstallD;
 
 	//forwarding sources to D stage (branch equality)
 	assign forwardaD = (rsD != 0 & rsD == writeregM & regwriteM);
 	assign forwardbD = (rtD != 0 & rtD == writeregM & regwriteM);
-	
+
 	//forwarding sources to E stage (ALU)
 
 	always @(*) begin
@@ -81,11 +83,15 @@ module hazard(
 	//stalls
 	assign #1 lwstallD = memtoregE & (rtE == rsD | rtE == rtD);
 	assign #1 branchstallD = branchD &
-				(regwriteE & 
+				(regwriteE &
 				(writeregE == rsD | writeregE == rtD) |
 				memtoregM &
 				(writeregM == rsD | writeregM == rtD));
-	assign #1 stallD = lwstallD | branchstallD;
+
+	//除法器stall
+	assign #1 divstallD = divE | divbusyE;
+
+	assign #1 stallD = lwstallD | branchstallD | divstallD;
 	assign #1 stallF = stallD;
 		//stalling D stalls all previous stages
 	assign #1 flushE = stallD;
