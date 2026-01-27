@@ -36,7 +36,7 @@ module mips(
 	wire hassignE;
 	wire [1:0] hilo_enE;
 	wire [1:0] hilo_mfE;
-	wire divE;           // 除法指令标志
+	wire divE;
 	wire flushE,equalD;
 
 	// ========== 成员3接口信号 ==========
@@ -57,7 +57,7 @@ module mips(
 		//execute stage
 		flushE,
 		memtoregE,alusrcE,
-		regdstE,regwriteE,
+		regdstE,regwriteE,	
 		alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,
 
 		//mem stage
@@ -100,8 +100,7 @@ module mips(
 		regwriteE,
 		alucontrolE,
 		hassignE,
-		hilo_enE,hilo_mfE,
-		divE,
+		hilo_enE,hilo_mfE,divE,
 		flushE,
 		//mem stage
 		memtoregM,

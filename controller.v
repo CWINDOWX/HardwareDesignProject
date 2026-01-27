@@ -34,7 +34,7 @@ module controller(
 	output wire hassignE,    // 判断是不是有符号的计算
 	output wire [1:0] hilo_enE,
 	output wire [1:0] hilo_mfE,
-	output wire divE,        // 除法指令标志 (成员1)
+	output wire divE,
 
 	//mem stage
 	output wire memtoregM,memwriteM,
@@ -83,13 +83,10 @@ module controller(
 		aluopD,
 		hassign_md
 		);
-	aludec ad(functD,aluopD,alucontrolD,hassign_ad,hilo_enD,hilo_mfD);
+	aludec ad(functD,aluopD,alucontrolD,hassign_ad,hilo_enD,hilo_mfD,divD);
 
 	assign hassignD = hassign_md | hassign_ad;
 	assign pcsrcD = branchD & equalD;
-
-	// DIV/DIVU指令检测
-	assign divD = (opD == 6'b000000) && (functD == 6'b011010 || functD == 6'b011011);
 
 	// ========== 成员3接口逻辑 ==========
 	// mem_op_o: 访存操作类型

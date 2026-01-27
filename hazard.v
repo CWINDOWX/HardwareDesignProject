@@ -33,8 +33,8 @@ module hazard(
 	input wire[4:0] writeregE,
 	input wire regwriteE,
 	input wire memtoregE,
-	input wire divE,          // 除法指令
-	input wire divbusyE,      // 除法器忙碌
+	input wire divE,
+	input wire divbusyE,
 	output reg[1:0] forwardaE,forwardbE,
 	output wire flushE,
 	//mem stage
@@ -88,10 +88,10 @@ module hazard(
 				memtoregM &
 				(writeregM == rsD | writeregM == rtD));
 
-	//除法器stall
 	assign #1 divstallD = divE | divbusyE;
 
 	assign #1 stallD = lwstallD | branchstallD | divstallD;
+
 	assign #1 stallF = stallD;
 		//stalling D stalls all previous stages
 	assign #1 flushE = stallD;
