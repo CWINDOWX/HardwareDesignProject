@@ -47,7 +47,12 @@ module datapath(
 	input wire[31:0] readdataM,
 	//writeback stage
 	input wire memtoregW,
-	input wire regwriteW
+	input wire regwriteW,
+
+	// ========== 成员3接口 (未来扩展) ==========
+	input wire [2:0] mem_op_i,     // 访存操作类型 <- Control (等待成员1)
+	input wire [1:0] ext_type_i,   // 立即数扩展类型 <- Control (等待成员1)
+	input wire exception_i         // 异常发生 <- Control
     );
 	
 	//fetch stage

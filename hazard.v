@@ -47,12 +47,12 @@ module hazard(
 	input wire regwriteW
     );
 
-	wire lwstallD,branchstallD;
+	wire lwstallD,branchstallD,divstallD;
 
 	//forwarding sources to D stage (branch equality)
 	assign forwardaD = (rsD != 0 & rsD == writeregM & regwriteM);
 	assign forwardbD = (rtD != 0 & rtD == writeregM & regwriteM);
-	
+
 	//forwarding sources to E stage (ALU)
 
 	always @(*) begin
@@ -83,7 +83,7 @@ module hazard(
 	//stalls
 	assign #1 lwstallD = memtoregE & (rtE == rsD | rtE == rtD);
 	assign #1 branchstallD = branchD &
-				(regwriteE & 
+				(regwriteE &
 				(writeregE == rsD | writeregE == rtD) |
 				memtoregM &
 				(writeregM == rsD | writeregM == rtD));
