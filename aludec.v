@@ -31,8 +31,8 @@ module aludec(
     );
 	always @(*) begin
         hassign <= 1'b0;
-        hilo_en <= 2'b10;   //10表示不写hilo寄存器，11表示写HI和LO，01表示写HI，00表示写LO
-        hilo_mf <= 2'b10;   //01表示HI写寄存器，00表示LO写寄存器
+        hilo_en <= 2'b00;   //00表示不写hilo寄存器，01表示写HI和LO，11表示写HI，10表示写LO
+        hilo_mf <= 2'b10;   //01表示HI写寄存器，00表示LO写寄存器，10表示没有HI和LO写寄存器。
         div <= 1'b0;
 		case (aluop)
 			2'b00: alucontrol <= 3'b010;//add (for lw/sw/addi/addiu)
@@ -69,11 +69,11 @@ module aludec(
                 6'b011000: begin    //MULT
                     alucontrol <= 3'b100; //mult
                     hassign <= 1'b1;
-                    hilo_en <= 2'b11;
+                    hilo_en <= 2'b01;
                 end
                 6'b011001:begin     //MULTU
                     alucontrol <= 3'b100; //mult
-                    hilo_en <= 2'b11;
+                    hilo_en <= 2'b01;
                 end
                 6'b010000:begin     //MFHI
                     alucontrol <= 3'b000; //不做计算
@@ -85,11 +85,11 @@ module aludec(
                 end
                 6'b010001:begin     //MTHI
                     alucontrol <= 3'b000;
-                    hilo_en <= 2'b01;
+                    hilo_en <= 2'b11;
                 end
                 6'b010011:begin     //MTLO
                     alucontrol <= 3'b000;
-                    hilo_en <= 2'b00;
+                    hilo_en <= 2'b10;
                 end
                 6'b011010:begin     //DIV
                     alucontrol <= 3'b000;

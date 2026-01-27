@@ -34,14 +34,14 @@ module hilo_reg(
 			hi_out <= 32'b0;
             lo_out <= 32'b0;
 		end 
-        else if(we == 2'b11 || wediv) begin
+        else if(we == 2'b01 || wediv) begin
 			hi_out <= hi_in;
             lo_out <= lo_in;
 		end
-        else if(we == 2'b01) begin
+        else if(we == 2'b11) begin
             hi_out <= hi_in;
         end
-        else if(we == 2'b00) begin
+        else if(we == 2'b10) begin
             lo_out <= lo_in;
         end
 	end

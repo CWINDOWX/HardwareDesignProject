@@ -148,14 +148,14 @@ module datapath(
 
 	divider divider(clk,rst,divE,hassignE,srca2E,srcb3E,qE,rE,divbusyE,divdoneE);
 
-	mux3 #(32) hiinmux(srca2E,aluresultE,rE,{divdoneE,hilo_enE[1]},hi_inE);
-	mux3 #(32) loinmux(srca2E,aluresult_loE,qE,{divdoneE,hilo_enE[1]},lo_inE);
+	mux3 #(32) hiinmux(aluresultE,srca2E,rE,{divdoneE,hilo_enE[1]},hi_inE);
+	mux3 #(32) loinmux(aluresult_loE,srca2E,qE,{divdoneE,hilo_enE[1]},lo_inE);
 
 	hilo_reg hilo_reg(clk,rst,divdoneE,hilo_enE,hi_inE,lo_inE,hi_outE,lo_outE);	//写hi_lo寄存器堆，是在EX阶段做的
 
 	mux2 #(5) wrmux(rtE,rdE,regdstE,writeregE);
 
-	mux3 #(32) aluoutmux(lo_outE,hi_outE,aluresultE,hilo_mfE,aluoutE);
+	mux3 #(32) aluoutmux(lo_outE,hi_outE,aluresultE,hilo_mfE,aluoutE);//即使出现flushE，导致00变成LO写寄存器，但因为此时writeregE也是0，所以没有问题。
 
 	//mem stage
 	flopr #(32) r1M(clk,rst,srcb2E,writedataM);
