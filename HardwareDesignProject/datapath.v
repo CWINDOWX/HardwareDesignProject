@@ -351,11 +351,18 @@ module datapath(
     // Overflow exception (OV=0x0c), committed in MEM stage
     assign exc_codeE = (exc_codeE_base != 5'h00) ? exc_codeE_base :
                        ((ov_enE && overflowE) ? 5'h0c : 5'h00);
-    divider div_inst(clk, rst, divE, hassignE, srca3E, srcb3E, qE, rE, divbusyE, divdoneE);
 
-    mux3 #(32) hiinmux(aluresultE, srca3E, rE, {divdoneE, hilo_enE[1]}, hi_inE);
-    mux3 #(32) loinmux(aluresult_loE, srca3E, qE, {divdoneE, hilo_enE[1]}, lo_inE);
-    hilo_reg hilo_reg(clk,rst,divdoneE,hilo_enE,hi_inE,lo_inE,hi_outE,lo_outE);	//写hi_lo寄存器堆，是在EX阶段做的
+    // Precise exception: when an exception/ERET is committed in MEM stage, the younger instruction in EX stage
+    // must not produce architectural side-effects (e.g., HI/LO writeback, divider start/done writeback).
+    wire       divE_eff      = divE & ~flush_except;
+    wire       divdoneE_eff  = divdoneE & ~flush_except;
+    wire [1:0] hilo_enE_eff  = flush_except ? 2'b00 : hilo_enE;
+
+    divider div_inst(clk, rst, divE_eff, hassignE, srca3E, srcb3E, qE, rE, divbusyE, divdoneE);
+
+    mux3 #(32) hiinmux(aluresultE, srca3E, rE, {divdoneE_eff, hilo_enE_eff[1]}, hi_inE);
+    mux3 #(32) loinmux(aluresult_loE, srca3E, qE, {divdoneE_eff, hilo_enE_eff[1]}, lo_inE);
+    hilo_reg hilo_reg(clk,rst,divdoneE_eff,hilo_enE_eff,hi_inE,lo_inE,hi_outE,lo_outE);	//写hi_lo寄存器堆，是在EX阶段做的
 
     mux3 #(32) aluoutmux(lo_outE, hi_outE, aluresultE, hilo_mfE, aluoutE);
     
@@ -416,7 +423,7 @@ module datapath(
     CP0_Reg u_cp0(
         .clk(clk),
         .rst(rst),
-        .we(mtc0M & ~exc_commitM & ~eret_commitM),
+        .we(mtc0M & ~exc_commitM & ~eret_commitM & ~squashM_r),
         .waddr(cp0_addrM),
         .raddr(cp0_addrD),
         .wdata(cp0_wdataM),
