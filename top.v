@@ -26,9 +26,9 @@ module top(
 	output wire memwrite
     );
 
-	wire[31:0] pc,instr,readdata;
+	wire[31:0] pc,instr,readdata,mem_op;
 
-	mips mips(clk,rst,pc,instr,memwrite,dataadr,writedata,readdata);
+	mips mips(clk,rst,pc,instr,memwrite,dataadr,writedata,mem_op,readdata);
 	inst_mem imem(~clk,pc[7:2],instr);
-	data_mem dmem(~clk,memwrite,dataadr,writedata,readdata);
+	dmem_wrapper dmem_wrapper(~clk,memwrite,dataadr,writedata,mem_op,readdata);
 endmodule

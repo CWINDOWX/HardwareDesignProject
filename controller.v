@@ -41,6 +41,7 @@ module controller(
 	//mem stage
 	output wire memtoregM,memwriteM,
 				regwriteM,
+	output wire [2:0] mem_opM,
 	//write back stage
 	output wire memtoregW,regwriteW
 
@@ -57,6 +58,7 @@ module controller(
 	wire divD;
 	wire isluiD;
 	wire [1:0] shiftD;
+	wire [2:0] mem_opD,mem_opE;
 
 	//execute stage
 	wire memwriteE;
@@ -69,7 +71,8 @@ module controller(
 		jumpD,
 		aluopD,
 		hassign_md,
-		isluiD
+		isluiD,
+		mem_opD
 		);
 	aludec ad(rst,functD,aluopD,alucontrolD,hassign_ad,hilo_enD,hilo_mfD,divD,shiftD);
 
@@ -77,17 +80,17 @@ module controller(
 	assign pcsrcD = branchD & equalD;
 
 	//pipeline registers
-	floprc #(17) regE(
+	floprc #(20) regE(
 		clk,
 		rst,
 		flushE,
-		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD,hilo_enD,hilo_mfD,divD,isluiD,shiftD},
-		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,isluiE,shiftE}
+		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD,hilo_enD,hilo_mfD,divD,isluiD,shiftD,mem_opD},
+		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,isluiE,shiftE,mem_opE}
 		);
-	flopr #(8) regM(
+	flopr #(6) regM(
 		clk,rst,
-		{memtoregE,memwriteE,regwriteE},
-		{memtoregM,memwriteM,regwriteM}
+		{memtoregE,memwriteE,regwriteE,mem_opE},
+		{memtoregM,memwriteM,regwriteM,mem_opM}
 		);
 	flopr #(8) regW(
 		clk,rst,
