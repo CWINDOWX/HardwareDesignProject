@@ -87,9 +87,10 @@ module hazard(
 				(writeregE == rsD | writeregE == rtD) |
 				memtoregM &
 				(writeregM == rsD | writeregM == rtD));
-
+	
+	wire divstallD;
 	assign #1 divstallD = divE | divbusyE;
-
+	
 	assign #1 stallD = lwstallD | branchstallD | divstallD;
 
 	assign #1 stallF = stallD;

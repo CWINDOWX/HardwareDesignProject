@@ -32,6 +32,7 @@ module mips(
 	wire [5:0] opD,functD;
 	wire regdstE,alusrcE,pcsrcD,memtoregE,memtoregM,memtoregW,
 			regwriteE,regwriteM,regwriteW;
+	wire branchD,jumpD;
 	wire [2:0] alucontrolE;
 	wire hassignE;
 	wire [1:0] hilo_enE;
