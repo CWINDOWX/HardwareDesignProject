@@ -55,7 +55,9 @@ module datapath(
     output wire[4:0]  debug_wb_rf_wnum,
     output wire[31:0] debug_wb_rf_wdata,
     // --- Exception/CP0 (MEM stage commit) ---
-    output wire        exc_commitM
+    output wire        exc_commitM,
+    // --- Squash younger inst in MEM (one-cycle after exception/eret) ---
+    output wire        squashM
 );
 
     // --- 内部信号定义 ---
@@ -95,6 +97,8 @@ module datapath(
     wire cp0_exl;
     wire eret_commitM;
     wire flush_except;
+    reg  squashM_r;
+    reg  squashW_r;
 
     // Exception code pipeline (commit in MEM stage)
     wire [4:0] exc_codeD;
@@ -112,8 +116,8 @@ module datapath(
     wire in_delayslotE, in_delayslotM;
 
     // Effective regwrite for hazards/writeback (include MFC0, exclude killed WB)
-    wire regwriteW_eff = (regwriteW | mfc0W) & ~exc_commitW;
-    wire regwriteM_eff = regwriteM | mfc0M;
+    wire regwriteW_eff = (regwriteW | mfc0W) & ~exc_commitW & ~squashW_r;
+    wire regwriteM_eff = (regwriteM | mfc0M) & ~squashM_r;
     wire regwriteE_eff = regwriteE | mfc0E;
 
     // --- Hazard Detection ---
@@ -123,7 +127,7 @@ module datapath(
         .forwardaD(forwardaD), .forwardbD(forwardbD), .stallD(stallD),
         .rsE(rsE), .rtE(rtE), .writeregE(writeregE), .regwriteE(regwriteE_eff), .memtoregE(memtoregE),
         .divE(divE), .divbusyE(divbusyE), .forwardaE(forwardaE), .forwardbE(forwardbE), .flushE(flushE_hazard),
-        .writeregM(writeregM), .regwriteM(regwriteM_eff), .memtoregM(memtoregM),
+        .writeregM(writeregM), .regwriteM(regwriteM_eff), .memtoregM(memtoregM & ~squashM_r),
         .writeregW(writeregW), .regwriteW(regwriteW_eff)
     );
 
@@ -379,18 +383,32 @@ module datapath(
 
     // Address error (AdEL/AdES) detection in MEM stage
     wire [1:0] mem_addr_low = aluoutM[1:0];
-    wire adel_lw  = memtoregM && (mem_opM == 3'b000) && (mem_addr_low != 2'b00);
-    wire adel_lh  = memtoregM && ((mem_opM == 3'b100) || (mem_opM == 3'b101)) && mem_addr_low[0];
-    wire ades_sw  = memwriteM && (mem_opM == 3'b000) && (mem_addr_low != 2'b00);
-    wire ades_sh  = memwriteM && (mem_opM == 3'b001) && mem_addr_low[0];
+    wire adel_lw  = (memtoregM & ~squashM_r) && (mem_opM == 3'b000) && (mem_addr_low != 2'b00);
+    wire adel_lh  = (memtoregM & ~squashM_r) && ((mem_opM == 3'b100) || (mem_opM == 3'b101)) && mem_addr_low[0];
+    wire ades_sw  = (memwriteM & ~squashM_r) && (mem_opM == 3'b000) && (mem_addr_low != 2'b00);
+    wire ades_sh  = (memwriteM & ~squashM_r) && (mem_opM == 3'b001) && mem_addr_low[0];
     wire [4:0] addr_exc_code = (adel_lw | adel_lh) ? 5'h04 :
                                (ades_sw | ades_sh) ? 5'h05 :
                                5'h00;
 
     assign exc_codeM = (addr_exc_code != 5'h00) ? addr_exc_code : exc_codeM_base;
     assign badvaddrM = (addr_exc_code != 5'h00) ? aluoutM : 32'b0;
-    assign exc_commitM = (exc_codeM != 5'h00);
-    assign eret_commitM = eretM & ~exc_commitM;
+    assign exc_commitM = (exc_codeM != 5'h00) & ~squashM_r;
+    assign eret_commitM = eretM & ~exc_commitM & ~squashM_r;
+
+    // Squash the instruction that is in EX stage when exception/eret is committed in MEM stage.
+    // That younger instruction will enter MEM stage in the next cycle unless masked.
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            squashM_r <= 1'b0;
+            squashW_r <= 1'b0;
+        end else begin
+            squashM_r <= flush_except;
+            squashW_r <= squashM_r;
+        end
+    end
+
+    assign squashM = squashM_r;
 
     // CP0 register file (supports exception entry/return + MFC0/MTC0)
     wire [31:0] pcM = pcplus8M - 32'h8;

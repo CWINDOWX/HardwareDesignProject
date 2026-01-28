@@ -52,23 +52,25 @@ module mips(
     wire flushE;
     wire linkE, jalrE;              // 融合新增跳转信号
 
-    // --- Memory Stage 信号 ---
-    wire regwriteM;
-    wire linkM, jalrM;              // 融合新增跳转信号
+	    // --- Memory Stage 信号 ---
+	    wire regwriteM;
+	    wire linkM, jalrM;              // 融合新增跳转信号
 
-    // --- Write Back Stage 信号 ---
-    wire memtoregW, regwriteW;
-    wire linkW, jalrW;              // 融合新增跳转信号
+	    // --- Write Back Stage 信号 ---
+	    wire memtoregW, regwriteW;
+	    wire linkW, jalrW;              // 融合新增跳转信号
 
-    // --- Exception commit (from datapath, MEM stage) ---
-    wire exc_commitM;
+	    // --- Exception commit (from datapath, MEM stage) ---
+	    wire exc_commitM;
+	    wire squashM;
 
-    // Raw memwrite from controller (must be visible to datapath for AdES detect)
-    wire memwriteM_raw;
+	    // Raw memwrite from controller (must be visible to datapath for AdES detect)
+	    wire memwriteM_raw;
+	    wire memtoregM_raw;
 
-    // --- 1. 实例化融合后的 Controller ---
-    controller c(
-        .clk(clk), .rst(rst),
+	    // --- 1. 实例化融合后的 Controller ---
+	    controller c(
+	        .clk(clk), .rst(rst),
         // Decode stage
         .opD(opD), .functD(functD), .rtD(rtD),
         .pcsrcD(pcsrcD), .branchD(branchD), .equalD(equalD), .jumpD(jumpD), .jumpregD(jumpregD),
@@ -83,10 +85,10 @@ module mips(
         .hilo_enE(hilo_enE), .hilo_mfE(hilo_mfE), .shiftE(shiftE),
 	        .linkE(linkE), .jalrE(jalrE),
 
-	        // Mem stage
-	        .memtoregM(memtoregM), .memwriteM(memwriteM_raw),
-	        .regwriteM(regwriteM), .mem_opM(mem_opM),
-	        .linkM(linkM), .jalrM(jalrM),
+		        // Mem stage
+		        .memtoregM(memtoregM_raw), .memwriteM(memwriteM_raw),
+		        .regwriteM(regwriteM), .mem_opM(mem_opM),
+		        .linkM(linkM), .jalrM(jalrM),
 
 	        // Write back stage
         .memtoregW(memtoregW), .regwriteW(regwriteW),
@@ -115,26 +117,29 @@ module mips(
         .flushE(flushE),
         .linkE(linkE), .jalrE(jalrE),
 
-	        // Mem stage
-	        .memtoregM(memtoregM), .memwriteM(memwriteM_raw), .regwriteM(regwriteM),
-	        .linkM(linkM), .jalrM(jalrM),
-	        .mem_opM(mem_opM),
-	        .aluoutM(aluoutM), .writedataM(writedataM),
-	        .readdataM(readdataM),
+		        // Mem stage
+		        .memtoregM(memtoregM_raw), .memwriteM(memwriteM_raw), .regwriteM(regwriteM),
+		        .linkM(linkM), .jalrM(jalrM),
+		        .mem_opM(mem_opM),
+		        .aluoutM(aluoutM), .writedataM(writedataM),
+		        .readdataM(readdataM),
 
         // Writeback stage
         .memtoregW(memtoregW), .regwriteW(regwriteW),
         .linkW(linkW), .jalrW(jalrW),
         // debug
         .debug_wb_pc(debug_wb_pc),
-	        .debug_wb_rf_wen(debug_wb_rf_wen),
-	        .debug_wb_rf_wnum(debug_wb_rf_wnum),
-	        .debug_wb_rf_wdata(debug_wb_rf_wdata),
-	        .exc_commitM(exc_commitM)
-	    );
+		        .debug_wb_rf_wen(debug_wb_rf_wen),
+		        .debug_wb_rf_wnum(debug_wb_rf_wnum),
+		        .debug_wb_rf_wdata(debug_wb_rf_wdata),
+		        .exc_commitM(exc_commitM),
+		        .squashM(squashM)
+		    );
 
-	    // Mask stores on the cycle the exception is committed (AdES or any other exception).
-	    // This prevents side effects from the excepting instruction.
-	    assign memwriteM = memwriteM_raw & ~exc_commitM;
+		    // Gate memory access when:
+		    // - current MEM stage instruction commits an exception (AdES, etc.)
+		    // - the MEM stage instruction is the younger one that must be squashed after exception/eret
+		    assign memtoregM = memtoregM_raw & ~exc_commitM & ~squashM;
+		    assign memwriteM = memwriteM_raw & ~exc_commitM & ~squashM;
 
 endmodule
