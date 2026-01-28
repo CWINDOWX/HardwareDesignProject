@@ -35,10 +35,14 @@ module controller(
 	output wire [1:0] hilo_enE,
 	output wire [1:0] hilo_mfE,
 	output wire divE,
+	// 移位相关控制信号
+	output wire shiftE,
+	output wire [1:0] shift_typeE,
+	output wire var_shiftE,
 
 	//mem stage
 	output wire memtoregM,memwriteM,
-				regwriteM,
+			regwriteM,
 	//write back stage
 	output wire memtoregW,regwriteW
 
@@ -53,6 +57,9 @@ module controller(
 	wire [1:0] hilo_enD;
 	wire [1:0] hilo_mfD;
 	wire divD;
+	// 移位相关控制信号
+	wire shiftD,var_shiftD;
+	wire [1:0] shift_typeD;
 
 	//execute stage
 	wire memwriteE;
@@ -66,18 +73,19 @@ module controller(
 		aluopD,
 		hassign_md
 		);
-	aludec ad(functD,aluopD,alucontrolD,hassign_ad,hilo_enD,hilo_mfD,divD);
+	aludec ad(functD,aluopD,opD,alucontrolD,hassign_ad,hilo_enD,hilo_mfD,divD,shiftD,shift_typeD,var_shiftD);
 
 	assign hassignD = hassign_md | hassign_ad;
 	assign pcsrcD = branchD & equalD;
 
 	//pipeline registers
-	floprc #(14) regE(
+	// 计算新的位宽：原有14位 + 1(shiftD) + 2(shift_typeD) + 1(var_shiftD) = 18位
+	floprc #(18) regE(
 		clk,
 		rst,
 		flushE,
-		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD,hilo_enD,hilo_mfD,divD},
-		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE,hilo_enE,hilo_mfE,divE}
+		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD,hilo_enD,hilo_mfD,divD,shiftD,shift_typeD,var_shiftD},
+		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,shiftE,shift_typeE,var_shiftE}
 		);
 	flopr #(8) regM(
 		clk,rst,

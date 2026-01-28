@@ -42,6 +42,10 @@ module maindec(
             6'b001001:controls <= 10'b1010000000;//ADDIU
             6'b001010:controls <= 10'b1010000111;//SLTI
             6'b001011:controls <= 10'b1010000110;//SLTIU
+            6'b001100:controls <= 10'b1010000100;//ANDI
+            6'b001101:controls <= 10'b1010000101;//ORI
+            6'b001110:controls <= 10'b1010000110;//XORI
+            6'b001111:controls <= 10'b1010000000;//LUI
             
             6'b000010:controls <= 10'b0000001000;//J
             default:  controls <= 10'b0000000000;//illegal op

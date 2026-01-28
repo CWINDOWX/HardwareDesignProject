@@ -29,7 +29,7 @@ module mips(
 	input wire[31:0] readdataM 
     );
 	
-	wire [5:0] opD,functD;
+	wire [5:0] opD,functD;//execute stage
 	wire regdstE,alusrcE,pcsrcD,memtoregE,memtoregM,memtoregW,
 			regwriteE,regwriteM,regwriteW;
 	wire [2:0] alucontrolE;
@@ -38,6 +38,10 @@ module mips(
 	wire [1:0] hilo_mfE;
 	wire divE;
 	wire flushE,equalD;
+	// 移位相关控制信号
+	wire shiftE;
+	wire [1:0] shift_typeE;
+	wire var_shiftE;
 
 	controller c(
 		clk,rst,
@@ -50,10 +54,12 @@ module mips(
 		memtoregE,alusrcE,
 		regdstE,regwriteE,	
 		alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,
+		// 移位相关控制信号
+		shiftE,shift_typeE,var_shiftE,
 
 		//mem stage
 		memtoregM,memwriteM,
-		regwriteM,
+				regwriteM,
 		//write back stage
 		memtoregW,regwriteW
 		);
@@ -74,6 +80,8 @@ module mips(
 		alucontrolE,
 		hassignE,
 		hilo_enE,hilo_mfE,divE,
+		// 移位相关控制信号
+		shiftE,shift_typeE,var_shiftE,
 		flushE,
 		//mem stage
 		memtoregM,
