@@ -21,83 +21,76 @@
 
 
 module hazard(
-	//fetch stage
-	output wire stallF,
-	//decode stage
-	input wire[4:0] rsD,rtD,
-	input wire branchD,
-	output wire forwardaD,forwardbD,
-	output wire stallD,
-	//execute stage
-	input wire[4:0] rsE,rtE,
-	input wire[4:0] writeregE,
-	input wire regwriteE,
-	input wire memtoregE,
-	input wire divE,
-	input wire divbusyE,
-	output reg[1:0] forwardaE,forwardbE,
-	output wire flushE,
-	//mem stage
-	input wire[4:0] writeregM,
-	input wire regwriteM,
-	input wire memtoregM,
+    //fetch stage
+    output wire stallF,
+    //decode stage
+    input wire[4:0] rsD, rtD,
+    input wire branchD,
+    input wire jumpregD,
+    output wire forwardaD, forwardbD,
+    output wire stallD,
+    //execute stage
+    input wire[4:0] rsE, rtE,
+    input wire[4:0] writeregE,
+    input wire regwriteE,
+    input wire memtoregE,
+    input wire divE,
+    input wire divbusyE,
+    output reg[1:0] forwardaE, forwardbE,
+    output wire flushE,
+    //mem stage
+    input wire[4:0] writeregM,
+    input wire regwriteM,
+    input wire memtoregM,
+    //write back stage
+    input wire[4:0] writeregW,
+    input wire regwriteW
+);
 
-	//write back stage
-	input wire[4:0] writeregW,
-	input wire regwriteW
-    );
+    wire lwstallD, branchstallD, divstallD;
 
-	wire lwstallD,branchstallD;
+    // --- Decode 阶段前推 (用于 Branch/JR 提前判断) ---
+    assign forwardaD = (rsD != 0 & rsD == writeregM & regwriteM);
+    assign forwardbD = (rtD != 0 & rtD == writeregM & regwriteM);
+    
+    // --- Execute 阶段前推 (ALU 数据流) ---
+    always @(*) begin
+        forwardaE = 2'b00;
+        forwardbE = 2'b00;
+        if(rsE != 0) begin
+            if(rsE == writeregM & regwriteM)      forwardaE = 2'b10;
+            else if(rsE == writeregW & regwriteW) forwardaE = 2'b01;
+        end
+        if(rtE != 0) begin
+            if(rtE == writeregM & regwriteM)      forwardbE = 2'b10;
+            else if(rtE == writeregW & regwriteW) forwardbE = 2'b01;
+        end
+    end
 
-	//forwarding sources to D stage (branch equality)
-	assign forwardaD = (rsD != 0 & rsD == writeregM & regwriteM);
-	assign forwardbD = (rtD != 0 & rtD == writeregM & regwriteM);
-	
-	//forwarding sources to E stage (ALU)
+    // --- 停顿逻辑 ---
 
-	always @(*) begin
-		forwardaE = 2'b00;
-		forwardbE = 2'b00;
-		if(rsE != 0) begin
-			/* code */
-			if(rsE == writeregM & regwriteM) begin
-				/* code */
-				forwardaE = 2'b10;
-			end else if(rsE == writeregW & regwriteW) begin
-				/* code */
-				forwardaE = 2'b01;
-			end
-		end
-		if(rtE != 0) begin
-			/* code */
-			if(rtE == writeregM & regwriteM) begin
-				/* code */
-				forwardbE = 2'b10;
-			end else if(rtE == writeregW & regwriteW) begin
-				/* code */
-				forwardbE = 2'b01;
-			end
-		end
-	end
+    // 1. Load-Use 冲突
+    assign lwstallD = memtoregE & (rtE == rsD | rtE == rtD);
 
-	//stalls
-	assign #1 lwstallD = memtoregE & (rtE == rsD | rtE == rtD);
-	assign #1 branchstallD = branchD &
-				(regwriteE & 
-				(writeregE == rsD | writeregE == rtD) |
-				memtoregM &
-				(writeregM == rsD | writeregM == rtD));
+    // 2. 分支/跳转寄存器冲突
+    // 如果 D 级是分支或 JR/JALR，且前面的指令（E 级或 M 级的 Load）会修改所需的寄存器
+    assign branchstallD = (branchD | jumpregD) & 
+                        ((regwriteE & (writeregE == rsD | writeregE == rtD)) |
+                         (memtoregM & (writeregM == rsD | writeregM == rtD)));
 
-	assign #1 divstallD = divE | divbusyE;
+    // 3. 除法器忙停顿
+    assign divstallD = divE | divbusyE;
 
-	assign #1 stallD = lwstallD | branchstallD | divstallD;
+    // --- 控制信号汇总 ---
+    
+    // 只要有任何冲突需要停顿，就固定住 F 和 D 级
+    assign stallD = lwstallD | branchstallD | divstallD;
+    assign stallF = stallD;
 
-	assign #1 stallF = stallD;
-		//stalling D stalls all previous stages
-	assign #1 flushE = stallD;
-		//stalling D flushes next stage
-	// Note: not necessary to stall D stage on store
-  	//       if source comes from load;
-  	//       instead, another bypass network could
-  	//       be added from W to M
+    // --- 【关键修改点】 ---
+    // 在支持延迟槽的机器中，flushE 仅在发生 Stall 时触发，用于在 EX 级插入气泡（NOP）。
+    // 正常跳转时，stallD 为 0，因此 flushE 为 0，延迟槽指令（下一条指令）得以进入 EX 级执行。
+    // 如果 stallD 为 1，说明下一条指令暂时不能进 EX，所以冲刷 EX 级。
+    assign flushE = stallD;
+
 endmodule

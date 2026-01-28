@@ -21,74 +21,98 @@
 
 
 module mips(
-	input wire clk,rst,
-	output wire[31:0] pcF,
-	input wire[31:0] instrF,
-	output wire memwriteM,
-	output wire[31:0] aluoutM,writedataM,
-    output wire[2:0] mem_opM,
-	input wire[31:0] readdataM 
+    input wire clk, rst,
+    // --- 指令/程序计数器 ---
+    output wire[31:0] pcF,
+    input wire[31:0] instrF,
+    // --- 存储器接口 ---
+    output wire memwriteM,
+    output wire[31:0] aluoutM, writedataM,
+    output wire[2:0] mem_opM,       // 保留第一个模块的内存操作位
+    input wire[31:0] readdataM 
+);
+
+    // --- Decode Stage 信号 ---
+    wire [5:0] opD, functD;
+    wire [4:0] rtD;
+    wire pcsrcD, branchD, jumpD, jumpregD, equalD;
+    wire [2:0] branch_opD;
+
+    // --- Execute Stage 信号 ---
+    wire regdstE, alusrcE, memtoregE, regwriteE;
+    wire [2:0] alucontrolE;
+    wire hassignE, isluiE, divE;    // 保留第一个模块的特性
+    wire [1:0] hilo_enE, hilo_mfE, shiftE;
+    wire flushE;
+    wire linkE, jalrE;              // 融合新增跳转信号
+
+    // --- Memory Stage 信号 ---
+    wire memtoregM, regwriteM;
+    wire linkM, jalrM;              // 融合新增跳转信号
+
+    // --- Write Back Stage 信号 ---
+    wire memtoregW, regwriteW;
+    wire linkW, jalrW;              // 融合新增跳转信号
+
+
+    // --- 1. 实例化融合后的 Controller ---
+    controller c(
+        .clk(clk), .rst(rst),
+        // Decode stage
+        .opD(opD), .functD(functD), .rtD(rtD),
+        .pcsrcD(pcsrcD), .branchD(branchD), .equalD(equalD), .jumpD(jumpD), .jumpregD(jumpregD),
+        .branch_opD(branch_opD),
+        
+        // Execute stage
+        .flushE(flushE),
+        .memtoregE(memtoregE), .alusrcE(alusrcE),
+        .regdstE(regdstE), .regwriteE(regwriteE),  
+        .alucontrolE(alucontrolE),
+        .hassignE(hassignE), .isluiE(isluiE), .divE(divE),
+        .hilo_enE(hilo_enE), .hilo_mfE(hilo_mfE), .shiftE(shiftE),
+        .linkE(linkE), .jalrE(jalrE),
+
+        // Mem stage
+        .memtoregM(memtoregM), .memwriteM(memwriteM),
+        .regwriteM(regwriteM), .mem_opM(mem_opM),
+        .linkM(linkM), .jalrM(jalrM),
+
+        // Write back stage
+        .memtoregW(memtoregW), .regwriteW(regwriteW),
+        .linkW(linkW), .jalrW(jalrW)
     );
-	
-	wire [5:0] opD,functD;
-	wire regdstE,alusrcE,pcsrcD,memtoregE,memtoregM,memtoregW,
-			regwriteE,regwriteM,regwriteW;
-	wire [2:0] alucontrolE;
-	wire hassignE;
-	wire [1:0] hilo_enE;
-	wire [1:0] hilo_mfE;
-	wire divE;
-	wire isluiE;
-	wire [1:0] shiftE;
-	wire flushE,equalD;
 
-	controller c(
-		clk,rst,
-		//decode stage
-		opD,functD,
-		pcsrcD,branchD,equalD,jumpD,
-		
-		//execute stage
-		flushE,
-		memtoregE,alusrcE,
-		regdstE,regwriteE,	
-		alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,
-		isluiE,shiftE,
+    // --- 2. 实例化更新后的 Datapath ---
+    datapath dp(
+        .clk(clk), .rst(rst),
+        // Fetch stage
+        .pcF(pcF),
+        .instrF(instrF),
 
-		//mem stage
-		memtoregM,memwriteM,
-		regwriteM,
-        mem_opM,
-		//write back stage
-		memtoregW,regwriteW
-		);
-	datapath dp(
-		clk,rst,
-		//fetch stage
-		pcF,
-		instrF,
-		//decode stage
-		pcsrcD,branchD,
-		jumpD,
-		equalD,
-		opD,functD,
-		//execute stage
-		memtoregE,
-		alusrcE,regdstE,
-		regwriteE,
-		alucontrolE,
-		hassignE,
-		hilo_enE,hilo_mfE,divE,isluiE,
-		shiftE,
-		flushE,
-		//mem stage
-		memtoregM,
-		regwriteM,
-		aluoutM,writedataM,
-		readdataM,
-		//writeback stage
-		memtoregW,
-		regwriteW
-	    );
-	
+        // Decode stage
+        .pcsrcD(pcsrcD), .branchD(branchD), .branch_opD(branch_opD),
+        .jumpD(jumpD), .jumpregD(jumpregD),
+        .equalD(equalD),
+        .opD(opD), .functD(functD), .rtD(rtD),
+
+        // Execute stage
+        .memtoregE(memtoregE), .alusrcE(alusrcE), .regdstE(regdstE),
+        .regwriteE(regwriteE),
+        .alucontrolE(alucontrolE),
+        .hassignE(hassignE), .isluiE(isluiE), .divE(divE),
+        .hilo_enE(hilo_enE), .hilo_mfE(hilo_mfE), .shiftE(shiftE),
+        .flushE(flushE),
+        .linkE(linkE), .jalrE(jalrE),
+
+        // Mem stage
+        .memtoregM(memtoregM), .regwriteM(regwriteM),
+        .linkM(linkM), .jalrM(jalrM),
+        .aluoutM(aluoutM), .writedataM(writedataM),
+        .readdataM(readdataM),
+
+        // Writeback stage
+        .memtoregW(memtoregW), .regwriteW(regwriteW),
+        .linkW(linkW), .jalrW(jalrW)
+    );
+
 endmodule

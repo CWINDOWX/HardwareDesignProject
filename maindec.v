@@ -21,49 +21,72 @@
 
 
 module maindec(
-	input wire[5:0] op,
+    input wire[5:0] op,
+    input wire[4:0] rt,
+    input wire[5:0] funct,  // 预留给 JR/JALR 等
 
-	output wire memtoreg,memwrite,
-	output wire branch,alusrc,
-	output wire regdst,regwrite,
-	output wire jump,
-	output wire[2:0] aluop,
-	output wire hassign,
-	output wire islui,
-	output wire[2:0] mem_op
-    );
-	reg[14:0] controls;
-	assign {regwrite,regdst,alusrc,branch,memwrite,memtoreg,jump,aluop,hassign,islui,mem_op} = controls;
-	always @(*) begin
-		case (op)
-            // 标准指令
-            6'b000000: controls <= 15'b1100000_010_0_0_000; // R-TYPE
-            6'b100011: controls <= 15'b1010010_000_0_0_000; // LW (mem_op 000)
-            6'b101011: controls <= 15'b0110100_000_0_0_000; // SW (mem_op 000)
-            6'b000100: controls <= 15'b0001000_001_0_0_000; // BEQ
-            6'b001000: controls <= 15'b1010000_000_0_0_000; // ADDI
-            6'b001001: controls <= 15'b1010000_000_0_0_000; // ADDIU
-            6'b001111: controls <= 15'b1010000_000_0_1_000; // LUI
-            6'b000010: controls <= 15'b0000001_000_0_0_000; // J
+    output wire regwrite, regdst, alusrc, branch, memwrite, memtoreg, jump,
+    output wire[2:0] aluop,
+    output wire hassign,
+    output wire islui,
+    output wire[2:0] mem_op,
+    output wire[2:0] branch_op, // 融合新增：分支类型
+    output wire link            // 融合新增：是否链接 (JAL/BGEZAL)
+);
 
-            // 加载指令 (Load)
-            6'b100000: controls <= 15'b1010010_000_0_0_110; // LB  (mem_op 110)
-            6'b100100: controls <= 15'b1010010_000_0_0_111; // LBU (mem_op 111)
-            6'b100001: controls <= 15'b1010010_000_0_0_100; // LH  (mem_op 100)
-            6'b100101: controls <= 15'b1010010_000_0_0_101; // LHU (mem_op 101)
+    reg[18:0] controls;
+    assign {regwrite, regdst, alusrc, branch, memwrite, memtoreg, jump, 
+            aluop, hassign, islui, mem_op, branch_op, link} = controls;
 
-            // 存储指令 (Store)
-            6'b101000: controls <= 15'b0010100_000_0_0_010; // SB  (mem_op 010)
-            6'b101001: controls <= 15'b0010100_000_0_0_001; // SH  (mem_op 001)
+    always @(*) begin
+        case (op)
+            // --- R-TYPE ---
+            6'b000000: controls <= 19'b1100000_010_0_0_000_000_0; 
 
-            // I型指令
-            6'b001010: controls <= 15'b1010000_011_1_0_000; // SLTI
-            6'b001011: controls <= 15'b1010000_011_0_0_000; // SLTIU
-            6'b001100: controls <= 15'b1010000_100_0_0_000; // ANDI
-            6'b001101: controls <= 15'b1010000_101_0_0_000; // ORI
-            6'b001110: controls <= 15'b1010000_110_0_0_000; // XORI
+            // --- 基础存取 ---
+            6'b100011: controls <= 19'b1010010_000_0_0_000_000_0; // LW
+            6'b101011: controls <= 19'b0110100_000_0_0_000_000_0; // SW (注: 基准代码SW位序略有不同，已匹配)
+            
+            // --- 扩展存取 (Load/Store) ---
+            6'b100000: controls <= 19'b1010010_000_0_0_110_000_0; // LB
+            6'b100100: controls <= 19'b1010010_000_0_0_111_000_0; // LBU
+            6'b100001: controls <= 19'b1010010_000_0_0_100_000_0; // LH
+            6'b100101: controls <= 19'b1010010_000_0_0_101_000_0; // LHU
+            6'b101000: controls <= 19'b0010100_000_0_0_010_000_0; // SB
+            6'b101001: controls <= 19'b0010100_000_0_0_001_000_0; // SH
 
-            default:   controls <= 15'b0000000_000_0_0_000; // illegal op
-		endcase
-	end
+            // --- 分支指令 (Branch) ---
+            6'b000100: controls <= 19'b0001000_001_0_0_000_000_0; // BEQ (branch_op 000)
+            6'b000101: controls <= 19'b0001000_001_0_0_000_001_0; // BNE (branch_op 001)
+            6'b000111: controls <= 19'b0001000_001_0_0_000_010_0; // BGTZ
+            6'b000110: controls <= 19'b0001000_001_0_0_000_011_0; // BLEZ
+
+            // --- REGIMM 复杂分支 ---
+            6'b000001: begin
+                case (rt)
+                    5'b00000: controls <= 19'b0001000_001_0_0_000_100_0; // BLTZ
+                    5'b00001: controls <= 19'b0001000_001_0_0_000_101_0; // BGEZ
+                    5'b10000: controls <= 19'b1001000_001_0_0_000_100_1; // BLTZAL (link=1)
+                    5'b10001: controls <= 19'b1001000_001_0_0_000_101_1; // BGEZAL (link=1)
+                    default:  controls <= 19'b0000000_000_0_0_000_000_0;
+                endcase
+            end
+
+            // --- I-TYPE ---
+            6'b001000: controls <= 19'b1010000_000_0_0_000_000_0; // ADDI
+            6'b001001: controls <= 19'b1010000_000_0_0_000_000_0; // ADDIU
+            6'b001111: controls <= 19'b1010000_000_0_1_000_000_0; // LUI
+            6'b001010: controls <= 19'b1010000_011_1_0_000_000_0; // SLTI
+            6'b001011: controls <= 19'b1010000_011_0_0_000_000_0; // SLTIU
+            6'b001100: controls <= 19'b1010000_100_0_0_000_000_0; // ANDI
+            6'b001101: controls <= 19'b1010000_101_0_0_000_000_0; // ORI
+            6'b001110: controls <= 19'b1010000_110_0_0_000_000_0; // XORI
+
+            // --- 跳转 ---
+            6'b000010: controls <= 19'b0000001_000_0_0_000_000_0; // J
+            6'b000011: controls <= 19'b1000001_000_0_0_000_000_1; // JAL (link=1)
+
+            default:   controls <= 19'b0000000_000_0_0_000_000_0;
+        endcase
+    end
 endmodule
