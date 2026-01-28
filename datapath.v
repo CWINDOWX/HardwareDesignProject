@@ -126,7 +126,23 @@ module datapath(
 	//decode stage
 	flopenr #(32) r1D(clk,rst,~stallD,pcplus4F,pcplus4D);
 	flopenrc #(32) r2D(clk,rst,~stallD,flushD,instrF,instrD);
-	signext se(instrD[15:0],signimmD);
+
+	// 成员3：ExtUnit 接入（替代 signext），后续可扩展到更多指令类型
+	wire [1:0] ext_typeD;
+	assign ext_typeD = (opD == 6'b001100 ||  // ANDI
+	                    opD == 6'b001101 ||  // ORI
+	                    opD == 6'b001110) ?  // XORI
+	                   2'b01 :               // 零扩展
+	                   2'b00;                // 符号扩展
+	ExtUnit extu(instrD[15:0], ext_typeD, signimmD);
+
+	// 成员3：Trap_Detect 预接入（目前主流水线未使用，供后续例外模块对接）
+	// verilator lint_off UNUSEDSIGNAL
+	wire trap_syscallD, trap_breakD;
+	wire [5:0] trap_typeD;
+	Trap_Detect u_trap_detect(.instr(instrD), .is_syscall(trap_syscallD), .is_break(trap_breakD), .trap_type(trap_typeD));
+	// verilator lint_on UNUSEDSIGNAL
+
 	sl2 immsh(signimmD,signimmshD);
 	adder pcadd2(pcplus4D,signimmshD,pcbranchD);
 	mux2 #(32) forwardamux(srcaD,aluoutM,forwardaD,srca2D);
@@ -160,9 +176,39 @@ module datapath(
 	mux2 #(32) srcamux(srca2E,{27'b0,saE},shiftE[0],srca3E);
 	mux2 #(32) srcbmux(srcb2E,srcimmE,alusrcE,srcb3E);
 
-	alu alu(srca3E,srcb3E,alucontrolE,hassignE,shiftE[1],aluresultE,aluresult_loE);
+	// 补齐 ALU 输出端口（为后续例外/分支扩展预留）
+	// verilator lint_off UNUSEDSIGNAL
+	wire alu_overflowE;
+	wire alu_zeroE;
+	// verilator lint_on UNUSEDSIGNAL
+	alu alu(
+		.a(srca3E),
+		.b(srcb3E),
+		.op(alucontrolE),
+		.hassign(hassignE),
+		.shift(shiftE[1]),
+		.y(aluresultE),
+		.y_lo(aluresult_loE),
+		.overflow(alu_overflowE),
+		.zero(alu_zeroE)
+	);
 
-	divider divider(clk,rst,divE,hassignE,srca3E,srcb3E,qE,rE,divbusyE,divdoneE);
+	// verilator lint_off UNUSEDSIGNAL
+	wire div_overflowE;
+	// verilator lint_on UNUSEDSIGNAL
+	divider divider(
+		.clk(clk),
+		.rst(rst),
+		.en(divE),
+		.hassign(hassignE),
+		.a(srca3E),
+		.b(srcb3E),
+		.q(qE),
+		.r(rE),
+		.busy(divbusyE),
+		.done(divdoneE),
+		.overflow(div_overflowE)
+	);
 
 	mux3 #(32) hiinmux(aluresultE,srca3E,rE,{divdoneE,hilo_enE[1]},hi_inE);
 	mux3 #(32) loinmux(aluresult_loE,srca3E,qE,{divdoneE,hilo_enE[1]},lo_inE);
