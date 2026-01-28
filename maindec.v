@@ -27,24 +27,29 @@ module maindec(
 	output wire branch,alusrc,
 	output wire regdst,regwrite,
 	output wire jump,
-	output wire[1:0] aluop,
-	output wire hassign
+	output wire[2:0] aluop,
+	output wire hassign,
+	output wire islui
     );
-	reg[9:0] controls;
-	assign {regwrite,regdst,alusrc,branch,memwrite,memtoreg,jump,aluop,hassign} = controls;
+	reg[11:0] controls;
+	assign {regwrite,regdst,alusrc,branch,memwrite,memtoreg,jump,aluop,hassign,islui} = controls;
 	always @(*) begin
 		case (op)
-            6'b000000:controls <= 10'b1100000100;//R-TYRE
-            6'b100011:controls <= 10'b1010010000;//LW
-            6'b101011:controls <= 10'b0010100000;//SW
-            6'b000100:controls <= 10'b0001000010;//BEQ
-            6'b001000:controls <= 10'b1010000001;//ADDI
-            6'b001001:controls <= 10'b1010000000;//ADDIU
-            6'b001010:controls <= 10'b1010000111;//SLTI
-            6'b001011:controls <= 10'b1010000110;//SLTIU
+            6'b000000:controls <= 12'b110000001000;	//R-TYRE
+            6'b100011:controls <= 12'b101001000000;	//LW
+            6'b101011:controls <= 12'b001010000000;	//SW
+            6'b000100:controls <= 12'b000100000100;	//BEQ
+            6'b001000:controls <= 12'b101000000010;	//ADDI
+            6'b001001:controls <= 12'b101000000000;	//ADDIU
+            6'b001010:controls <= 12'b101000001110;	//SLTI
+            6'b001011:controls <= 12'b101000001100;	//SLTIU
+			6'b001100:controls <= 12'b101000010000;	//ANDI
+			6'b001101:controls <= 12'b101000010100;	//ORI
+			6'b001110:controls <= 12'b101000011000;	//XORI
+			6'b001111:controls <= 12'b101000000001;	//lui
             
-            6'b000010:controls <= 10'b0000001000;//J
-            default:  controls <= 10'b0000000000;//illegal op
+            6'b000010:controls <= 12'b000000100000;//J
+            default:  controls <= 12'b000000000000;//illegal op
 		endcase
 	end
 endmodule

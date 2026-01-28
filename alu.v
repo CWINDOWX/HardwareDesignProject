@@ -35,34 +35,51 @@ module alu(
 	assign s = a + bout + op[2];
 	always @(*) begin
 		y_lo <= 32'b0;
-		case (op[1:0])
-			2'b00: begin        // 000做AND，100做乘法相关运算
-                if(op[2]) begin
-                    if(hassign) begin
-                        {y,y_lo} <= $signed(a) * $signed(b);
-                    end
-                    else begin
-                        {y,y_lo} <= {32'b0, a} * {32'b0, b};
-                    end
-                end
-                else begin
-                    y <= a & bout;
-                end
-            end
-
-            2'b01: y <= a | bout;
-            2'b10: y <= s;
-
-            2'b11: begin 
-                if(hassign) begin
+		case (op)
+			3'b000:begin		//slt
+				if(hassign) begin
                     y <= s[31] ^ ((~a[31] & b[31] & s[31] | a[31] & ~b[31] & ~s[31]));    // 不能直接用overflow，为了避免产生异常
                 end
                 else begin
                     y <= a < b;
                 end
+			end
+
+			3'b010: begin
+				y <= s;			//add
+			end
+
+			3'b100: begin      	//mult
+				if(hassign) begin
+					{y,y_lo} <= $signed(a) * $signed(b);
+				end
+				else begin
+					{y,y_lo} <= {32'b0, a} * {32'b0, b};
+				end
             end
+			
+            3'b110: begin
+				y <= s;			//sub
+			end
+
+            3'b001: begin
+				y <= a | bout;	//or
+			end
+
+			3'b011: begin		//and
+				y <= a & bout;
+			end
+
+			3'b101: begin		//nor
+				y <= ~(a | b);
+			end
+
+			3'b111: begin		//xor
+				y <= a ^ b;
+			end
 		endcase	
 	end
+	
 	assign zero = (y == 32'b0);
 
 	always @(*) begin

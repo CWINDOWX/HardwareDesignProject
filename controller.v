@@ -35,6 +35,7 @@ module controller(
 	output wire [1:0] hilo_enE,
 	output wire [1:0] hilo_mfE,
 	output wire divE,
+	output wire isluiE,
 
 	//mem stage
 	output wire memtoregM,memwriteM,
@@ -45,7 +46,7 @@ module controller(
     );
 	
 	//decode stage
-	wire[1:0] aluopD;
+	wire[2:0] aluopD;
 	wire memtoregD,memwriteD,alusrcD,
 		regdstD,regwriteD;
 	wire[2:0] alucontrolD;
@@ -53,6 +54,7 @@ module controller(
 	wire [1:0] hilo_enD;
 	wire [1:0] hilo_mfD;
 	wire divD;
+	wire isluiD;
 
 	//execute stage
 	wire memwriteE;
@@ -64,7 +66,8 @@ module controller(
 		regdstD,regwriteD,
 		jumpD,
 		aluopD,
-		hassign_md
+		hassign_md,
+		isluiD
 		);
 	aludec ad(functD,aluopD,alucontrolD,hassign_ad,hilo_enD,hilo_mfD,divD);
 
@@ -72,12 +75,12 @@ module controller(
 	assign pcsrcD = branchD & equalD;
 
 	//pipeline registers
-	floprc #(14) regE(
+	floprc #(15) regE(
 		clk,
 		rst,
 		flushE,
-		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD,hilo_enD,hilo_mfD,divD},
-		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE,hilo_enE,hilo_mfE,divE}
+		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD,hilo_enD,hilo_mfD,divD,isluiD},
+		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,isluiE}
 		);
 	flopr #(8) regM(
 		clk,rst,

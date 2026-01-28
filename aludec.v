@@ -22,7 +22,7 @@
 
 module aludec(
 	input wire[5:0] funct,
-	input wire[1:0] aluop,
+	input wire[2:0] aluop,
 	output reg[2:0] alucontrol,
 	output reg hassign,
     output reg[1:0] hilo_en,
@@ -35,10 +35,13 @@ module aludec(
         hilo_mf <= 2'b10;   //01表示HI写寄存器，00表示LO写寄存器，10表示没有HI和LO写寄存器。
         div <= 1'b0;
 		case (aluop)
-			2'b00: alucontrol <= 3'b010;//add (for lw/sw/addi/addiu)
-			2'b01: alucontrol <= 3'b110;//sub (for beq)
-			2'b11: alucontrol <= 3'b111;//slt
-			default : case (funct)
+			3'b000: alucontrol <= 3'b010;   //add (for lw/sw/addi/addiu)
+			3'b001: alucontrol <= 3'b110;   //sub (for beq)
+			3'b011: alucontrol <= 3'b000;   //slt (for slti,sltiu)
+            3'b100: alucontrol <= 3'b011;   //and (for andi)
+            3'b101: alucontrol <= 3'b001;   //or  (for ori)
+            3'b110: alucontrol <= 3'b111;   //xor (for xori)
+			3'b010: case (funct)    // R型指令
                 6'b100000:    begin    //ADD
                     alucontrol <= 3'b010; //add
                     hassign <= 1'b1;
@@ -54,17 +57,17 @@ module aludec(
                     alucontrol <= 3'b110; //sub
                 end
                 6'b100100: begin    //AND
-                    alucontrol <= 3'b000; //and
+                    alucontrol <= 3'b011; //and
                 end
                 6'b100101: begin    //OR
                     alucontrol <= 3'b001; //or
                 end
                 6'b101010: begin    //SLT
-                    alucontrol <= 3'b111; //slt
+                    alucontrol <= 3'b000; //slt
                     hassign <= 1'b1;    
                 end
                 6'b101011: begin    //SLTU
-                    alucontrol <= 3'b111; //slt
+                    alucontrol <= 3'b000; //slt
                 end
                 6'b011000: begin    //MULT
                     alucontrol <= 3'b100; //mult
@@ -100,6 +103,12 @@ module aludec(
                     alucontrol <= 3'b000;
                     div <= 1'b1;
                     hassign <= 1'b0;
+                end
+                6'b100111:begin     //NOR
+                    alucontrol <= 3'b101;   
+                end
+                6'b100110:begin     //XOR
+                    alucontrol <= 3'b111;
                 end
                 default: begin 
                     alucontrol <= 3'b000;

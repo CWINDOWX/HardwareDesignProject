@@ -39,6 +39,7 @@ module datapath(
 	input wire [1:0] hilo_enE,
 	input wire [1:0] hilo_mfE,
 	input wire divE,
+	input wire isluiE,
 	output wire flushE,
 	//mem stage
 	input wire memtoregM,
@@ -61,6 +62,8 @@ module datapath(
 	wire flushD,stallD; 
 	wire [31:0] signimmD,signimmshD;
 	wire [31:0] srcaD,srca2D,srcbD,srcb2D;
+	wire [31:0] zeroimmD;
+	wire [31:0] luiimmD;
 	//execute stage
 	wire [1:0] forwardaE,forwardbE;
 	wire [4:0] rsE,rtE,rdE;
@@ -72,6 +75,9 @@ module datapath(
 	wire [31:0] hi_inE,lo_inE;
 	wire [31:0] qE,rE;	
 	wire divbusyE,divdoneE;
+	wire [31:0] srcimmE;
+	wire [31:0] zeroimmE;
+	wire [31:0] luiimmE;
 	//mem stage
 	wire [4:0] writeregM;
 	//writeback stage
@@ -131,6 +137,8 @@ module datapath(
 	assign rsD = instrD[25:21];
 	assign rtD = instrD[20:16];
 	assign rdD = instrD[15:11];
+	assign zeroimmD = {16'b0,instrD[15:0]};
+	assign luiimmD = {instrD[15:0],16'b0};
 
 	//execute stage
 	floprc #(32) r1E(clk,rst,flushE,srcaD,srcaE);
@@ -139,10 +147,14 @@ module datapath(
 	floprc #(5) r4E(clk,rst,flushE,rsD,rsE);
 	floprc #(5) r5E(clk,rst,flushE,rtD,rtE);
 	floprc #(5) r6E(clk,rst,flushE,rdD,rdE);
+	floprc #(32) r7E(clk,rst,flushE,zeroimmD,zeroimmE);
+	floprc #(32) r8E(clk,rst,flushE,luiimmD,luiimmE);
 
 	mux3 #(32) forwardaemux(srcaE,resultW,aluoutM,forwardaE,srca2E);
 	mux3 #(32) forwardbemux(srcbE,resultW,aluoutM,forwardbE,srcb2E);
-	mux2 #(32) srcbmux(srcb2E,signimmE,alusrcE,srcb3E);
+
+	mux3 #(32) srcextmux(signimmE,zeroimmE,luiimmE,{isluiE,alucontrolE[0]},srcimmE);
+	mux2 #(32) srcbmux(srcb2E,srcimmE,alusrcE,srcb3E);
 
 	alu alu(srca2E,srcb3E,alucontrolE,hassignE,aluresultE,aluresult_loE);
 
