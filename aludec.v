@@ -21,19 +21,22 @@
 
 
 module aludec(
+    input wire rst,
 	input wire[5:0] funct,
 	input wire[2:0] aluop,
 	output reg[2:0] alucontrol,
 	output reg hassign,
     output reg[1:0] hilo_en,
     output reg[1:0] hilo_mf,
-    output reg div
+    output reg div,
+    output reg[1:0] shift
     );
 	always @(*) begin
         hassign <= 1'b0;
         hilo_en <= 2'b00;   //00表示不写hilo寄存器，01表示写HI和LO，11表示写HI，10表示写LO
         hilo_mf <= 2'b10;   //01表示HI写寄存器，00表示LO写寄存器，10表示没有HI和LO写寄存器。
         div <= 1'b0;
+        shift <= 2'b00;
 		case (aluop)
 			3'b000: alucontrol <= 3'b010;   //add (for lw/sw/addi/addiu)
 			3'b001: alucontrol <= 3'b110;   //sub (for beq)
@@ -109,6 +112,32 @@ module aludec(
                 end
                 6'b100110:begin     //XOR
                     alucontrol <= 3'b111;
+                end
+                6'b000000:begin     //SLL
+                    alucontrol <= 3'b001;
+                    if(~rst) begin
+                        shift <= 2'b11;
+                    end
+                end
+                6'b000010:begin     //SRL
+                    alucontrol <= 3'b011;
+                    shift <= 2'b11;
+                end
+                6'b000011:begin     //SRA
+                    alucontrol <= 3'b101;
+                    shift <= 2'b11;
+                end
+                6'b000100:begin     //SLLV
+                    alucontrol <= 3'b001;
+                    shift <= 2'b10;
+                end
+                6'b000110:begin     //SRLV
+                    alucontrol <= 3'b011;
+                    shift <= 2'b10;
+                end
+                6'b000111:begin     //SRAV
+                    alucontrol <= 3'b101;
+                    shift <= 2'b10;
                 end
                 default: begin 
                     alucontrol <= 3'b000;

@@ -40,6 +40,7 @@ module datapath(
 	input wire [1:0] hilo_mfE,
 	input wire divE,
 	input wire isluiE,
+	input wire [1:0] shiftE,
 	output wire flushE,
 	//mem stage
 	input wire memtoregM,
@@ -58,7 +59,7 @@ module datapath(
 	//decode stage
 	wire [31:0] pcplus4D,instrD;
 	wire forwardaD,forwardbD;
-	wire [4:0] rsD,rtD,rdD;
+	wire [4:0] rsD,rtD,rdD,saD;
 	wire flushD,stallD; 
 	wire [31:0] signimmD,signimmshD;
 	wire [31:0] srcaD,srca2D,srcbD,srcb2D;
@@ -66,10 +67,10 @@ module datapath(
 	wire [31:0] luiimmD;
 	//execute stage
 	wire [1:0] forwardaE,forwardbE;
-	wire [4:0] rsE,rtE,rdE;
+	wire [4:0] rsE,rtE,rdE,saE;
 	wire [4:0] writeregE;
 	wire [31:0] signimmE;
-	wire [31:0] srcaE,srca2E,srcbE,srcb2E,srcb3E;
+	wire [31:0] srcaE,srca2E,srca3E,srcbE,srcb2E,srcb3E;
 	wire [31:0] aluoutE,aluresult_loE,aluresultE;
 	wire [31:0] hi_outE,lo_outE;
 	wire [31:0] hi_inE,lo_inE;
@@ -137,6 +138,7 @@ module datapath(
 	assign rsD = instrD[25:21];
 	assign rtD = instrD[20:16];
 	assign rdD = instrD[15:11];
+	assign saD = instrD[10:6];
 	assign zeroimmD = {16'b0,instrD[15:0]};
 	assign luiimmD = {instrD[15:0],16'b0};
 
@@ -149,19 +151,21 @@ module datapath(
 	floprc #(5) r6E(clk,rst,flushE,rdD,rdE);
 	floprc #(32) r7E(clk,rst,flushE,zeroimmD,zeroimmE);
 	floprc #(32) r8E(clk,rst,flushE,luiimmD,luiimmE);
+	floprc #(5) r9E(clk,rst,flushE,saD,saE);
 
 	mux3 #(32) forwardaemux(srcaE,resultW,aluoutM,forwardaE,srca2E);
 	mux3 #(32) forwardbemux(srcbE,resultW,aluoutM,forwardbE,srcb2E);
 
 	mux3 #(32) srcextmux(signimmE,zeroimmE,luiimmE,{isluiE,alucontrolE[0]},srcimmE);
+	mux2 #(32) srcamux(srca2E,{27'b0,saE},shiftE[0],srca3E);
 	mux2 #(32) srcbmux(srcb2E,srcimmE,alusrcE,srcb3E);
 
-	alu alu(srca2E,srcb3E,alucontrolE,hassignE,aluresultE,aluresult_loE);
+	alu alu(srca3E,srcb3E,alucontrolE,hassignE,shiftE[1],aluresultE,aluresult_loE);
 
-	divider divider(clk,rst,divE,hassignE,srca2E,srcb3E,qE,rE,divbusyE,divdoneE);
+	divider divider(clk,rst,divE,hassignE,srca3E,srcb3E,qE,rE,divbusyE,divdoneE);
 
-	mux3 #(32) hiinmux(aluresultE,srca2E,rE,{divdoneE,hilo_enE[1]},hi_inE);
-	mux3 #(32) loinmux(aluresult_loE,srca2E,qE,{divdoneE,hilo_enE[1]},lo_inE);
+	mux3 #(32) hiinmux(aluresultE,srca3E,rE,{divdoneE,hilo_enE[1]},hi_inE);
+	mux3 #(32) loinmux(aluresult_loE,srca3E,qE,{divdoneE,hilo_enE[1]},lo_inE);
 
 	hilo_reg hilo_reg(clk,rst,divdoneE,hilo_enE,hi_inE,lo_inE,hi_outE,lo_outE);	//写hi_lo寄存器堆，是在EX阶段做的
 

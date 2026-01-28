@@ -24,6 +24,7 @@ module alu(
 	input wire[31:0] a,b,
 	input wire[2:0] op,
 	input wire hassign, //判断是不是有符号的计算
+	input wire shift,
 	output reg[31:0] y,
 	output reg[31:0] y_lo, //做乘除法时需要用到，结果的低32位
 	output reg overflow,
@@ -63,15 +64,30 @@ module alu(
 			end
 
             3'b001: begin
-				y <= a | bout;	//or
+				if(shift) begin
+					y <= b << a[4:0]; // SLL (a 传入 shamt)
+				end
+				else begin
+					y <= a | bout;	//or
+				end
 			end
 
-			3'b011: begin		//and
-				y <= a & bout;
+			3'b011: begin		
+				if(shift) begin
+					y <= b >> a[4:0];	// SRL
+				end
+				else begin
+					y <= a & bout;	//and
+				end
 			end
 
-			3'b101: begin		//nor
-				y <= ~(a | b);
+			3'b101: begin	
+				if(shift) begin
+					y <= $signed(b) >>> a[4:0]; // SRA (算术右移)
+				end	
+				else begin
+					y <= ~(a | b);//nor
+				end
 			end
 
 			3'b111: begin		//xor
