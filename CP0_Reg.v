@@ -10,7 +10,8 @@ module CP0_Reg (
 
     // 读写接口 (MFC0/MTC0指令)
     input         we,          // 写使能 <- MTC0
-    input  [4:0]  addr,        // 寄存器地址
+    input  [4:0]  waddr,       // 写寄存器地址 (MTC0: rd)
+    input  [4:0]  raddr,       // 读寄存器地址 (MFC0: rd)
     input  [31:0] wdata,       // 写入数据
     output reg [31:0] rdata,       // 读取数据 -> MFC0
 
@@ -69,7 +70,7 @@ module CP0_Reg (
             epc_reg <= 32'd0;
         end else if (exc_valid_i && (status_exl_reg == 1'b0)) begin
             epc_reg <= in_delay_slot_i ? (pc_i - 32'd4) : pc_i;
-        end else if (we && addr == ADDR_EPC) begin
+        end else if (we && waddr == ADDR_EPC) begin
             epc_reg <= wdata;  // MTC0手动写EPC
         end
     end
@@ -97,7 +98,7 @@ module CP0_Reg (
             cause_exccode_reg <= 5'd0;
         end else begin
             // 软件仅允许写Cause.IP[1:0]
-            if (we && addr == ADDR_CAUSE) begin
+            if (we && waddr == ADDR_CAUSE) begin
                 cause_sw_ip_reg <= wdata[9:8];
             end
 
@@ -126,7 +127,7 @@ module CP0_Reg (
             end
 
             // 软件写Status（Bev恒1，其他域只接收IM/EXL/IE）
-            if (we && addr == ADDR_STATUS) begin
+            if (we && waddr == ADDR_STATUS) begin
                 status_im_reg <= wdata[15:8];
                 status_exl_reg <= wdata[1];
                 status_ie_reg <= wdata[0];
@@ -141,7 +142,7 @@ module CP0_Reg (
         if (rst) begin
             count_reg <= 32'd0;
             count_tick <= 1'b0;
-        end else if (we && addr == ADDR_COUNT) begin
+        end else if (we && waddr == ADDR_COUNT) begin
             count_reg <= wdata;
         end else begin
             count_tick <= ~count_tick;
@@ -164,7 +165,7 @@ module CP0_Reg (
 
     // 读数据多路选择 (MFC0)
     always @(*) begin
-        case (addr)
+        case (raddr)
             ADDR_BADVADDR: rdata = badvaddr_reg;
             ADDR_COUNT:    rdata = count_reg;
             ADDR_STATUS:   rdata = status_packed;
