@@ -26,13 +26,21 @@ module regfile(
 	input wire[4:0] ra1,ra2,wa3,
 	input wire[31:0] wd3,
 	output wire[31:0] rd1,rd2
-    );
+);
 
 	reg [31:0] rf[31:0];
+	
+	// ← 添加：初始化所有寄存器为 0
+	integer i;
+	initial begin
+		for (i = 0; i < 32; i = i + 1) begin
+			rf[i] = 32'h00000000;
+		end
+	end
 
 	always @(negedge clk) begin
-		if(we3) begin
-			 rf[wa3] <= wd3;
+		if(we3 && wa3 != 0) begin  // ← 添加：防止写入 $0
+			rf[wa3] <= wd3;
 		end
 	end
 

@@ -24,69 +24,92 @@ module controller(
 	input wire clk,rst,
 	//decode stage
 	input wire[5:0] opD,functD,
-	output wire pcsrcD,branchD,equalD,jumpD,
+	input wire[4:0] rtD,
+	output wire pcsrcD,branchD,
+	output wire[2:0] branch_opD,
+	output wire equalD,
+	output wire jumpD,
+	output wire jumpregD,
 	
 	//execute stage
 	input wire flushE,
 	output wire memtoregE,alusrcE,
-	output wire regdstE,regwriteE,	
+	output wire regdstE,regwriteE,
+	output wire linkE,
+	output wire jalrE,  // ¡û ĞÂÔö£ºJALR ×¨ÓÃĞÅºÅ
 	output wire[2:0] alucontrolE,
-	output wire hassignE,    // åˆ¤æ–­æ˜¯ä¸æ˜¯æœ‰ç¬¦å·çš„è®¡ç®—
-	output wire [1:0] hilo_enE,
-	output wire [1:0] hilo_mfE,
-	output wire divE,
 
 	//mem stage
 	output wire memtoregM,memwriteM,
 				regwriteM,
+	output wire linkM,
+	output wire jalrM,  // ¡û ĞÂÔö
+	
 	//write back stage
-	output wire memtoregW,regwriteW
-
-    );
+	output wire memtoregW,regwriteW,
+	output wire linkW,
+	output wire jalrW  // ¡û ĞÂÔö
+);
 	
 	//decode stage
 	wire[1:0] aluopD;
-	wire memtoregD,memwriteD,alusrcD,
-		regdstD,regwriteD;
-	wire[2:0] alucontrolD;
-	wire hassign_md,hassign_ad,hassignD;
-	wire [1:0] hilo_enD;
-	wire [1:0] hilo_mfD;
-	wire divD;
+    wire memtoregD,memwriteD,alusrcD,
+        regdstD,regwriteD_raw;  // ¸Ä£ºÌí¼Ó _raw
+    wire regwriteD;  // ¸Ä£ºÌí¼Óµ¥¶ÀµÄ¶¨Òå
+    wire[2:0] alucontrolD;
+    wire linkD;
+    wire jalrD;  // ĞÂ Ôö¼Ó
 
 	//execute stage
 	wire memwriteE;
 
 	maindec md(
 		opD,
+		rtD,
+		functD,
 		memtoregD,memwriteD,
 		branchD,alusrcD,
-		regdstD,regwriteD,
+		regdstD,regwriteD_raw,
 		jumpD,
 		aluopD,
-		hassign_md
-		);
-	aludec ad(functD,aluopD,alucontrolD,hassign_ad,hilo_enD,hilo_mfD,divD);
+		branch_opD,
+		linkD
+	);
+	
+	aludec ad(functD,aluopD,alucontrolD);
 
-	assign hassignD = hassign_md | hassign_ad;
 	assign pcsrcD = branchD & equalD;
+	
+	// ¼ì²â JR ºÍ JALR
+	wire is_jr, is_jalr;
+	assign is_jr = (opD == 6'b000000) && (functD == 6'b001000);
+	assign is_jalr = (opD == 6'b000000) && (functD == 6'b001001);
+	assign jumpregD = is_jr | is_jalr;
+	assign jalrD = is_jalr;
+	
+	// JR ²»Ğ´¼Ä´æÆ÷£¨JALR ĞèÒªĞ´£©
+    assign regwriteD = regwriteD_raw & ~is_jr;
+	
+	// Ìõ¼şÁ´½ÓÂß¼­£¨Ö»ÓÃÓÚ JAL, BGEZAL, BLTZAL£¬²»°üÀ¨ JALR£©
+	wire linkD_final;
+	assign linkD_final = linkD & (jumpD | pcsrcD);  // ¡û ÒÆ³ı jumpregD
 
-	//pipeline registers
-	floprc #(14) regE(
+	//pipeline registers£¨À©Õ¹Îª 10 Î»£¬Ìí¼Ó jalr£©
+	floprc #(10) regE(
 		clk,
 		rst,
 		flushE,
-		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,hassignD,hilo_enD,hilo_mfD,divD},
-		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,hassignE,hilo_enE,hilo_mfE,divE}
-		);
-	flopr #(8) regM(
+		{memtoregD,memwriteD,alusrcD,regdstD,regwriteD,alucontrolD,linkD_final,jalrD},
+		{memtoregE,memwriteE,alusrcE,regdstE,regwriteE,alucontrolE,linkE,jalrE}
+	);
+	flopr #(5) regM(
 		clk,rst,
-		{memtoregE,memwriteE,regwriteE},
-		{memtoregM,memwriteM,regwriteM}
-		);
-	flopr #(8) regW(
+		{memtoregE,memwriteE,regwriteE,linkE,jalrE},
+		{memtoregM,memwriteM,regwriteM,linkM,jalrM}
+	);
+	flopr #(4) regW(
 		clk,rst,
-		{memtoregM,regwriteM},
-		{memtoregW,regwriteW}
-		);
+		{memtoregM,regwriteM,linkM,jalrM},
+		{memtoregW,regwriteW,linkW,jalrW}
+	);
 endmodule

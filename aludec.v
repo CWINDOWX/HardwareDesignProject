@@ -23,87 +23,21 @@
 module aludec(
 	input wire[5:0] funct,
 	input wire[1:0] aluop,
-	output reg[2:0] alucontrol,
-	output reg hassign,
-    output reg[1:0] hilo_en,
-    output reg[1:0] hilo_mf,
-    output reg div
+	output reg[2:0] alucontrol
     );
 	always @(*) begin
-        hassign <= 1'b0;
-        hilo_en <= 2'b10;   //10è¡¨ç¤ºä¸å†™hiloå¯„å­˜å™¨ï¼Œ11è¡¨ç¤ºå†™HIå’ŒLOï¼Œ01è¡¨ç¤ºå†™HIï¼Œ00è¡¨ç¤ºå†™LO
-        hilo_mf <= 2'b10;   //01è¡¨ç¤ºHIå†™å¯„å­˜å™¨ï¼Œ00è¡¨ç¤ºLOå†™å¯„å­˜å™¨
-        div <= 1'b0;
 		case (aluop)
-			2'b00: alucontrol <= 3'b010;//add (for lw/sw/addi/addiu)
+			2'b00: alucontrol <= 3'b010;//add (for lw/sw/addi)
 			2'b01: alucontrol <= 3'b110;//sub (for beq)
-			2'b11: alucontrol <= 3'b111;//slt
+			2'b11: alucontrol <= 3'b001; // OR  (for ori/andi/xori, ÔÝÊ±¶¼ÓÃOR)
 			default : case (funct)
-                6'b100000:    begin    //ADD
-                    alucontrol <= 3'b010; //add
-                    hassign <= 1'b1;
-                end
-                6'b100001: begin    //ADDU
-                    alucontrol <= 3'b010; //add
-                end
-                6'b100010: begin    //SUB
-                    alucontrol <= 3'b110; //sub
-                    hassign <= 1'b1;
-                end
-                6'b100011: begin    //SUBU
-                    alucontrol <= 3'b110; //sub
-                end
-                6'b100100: begin    //AND
-                    alucontrol <= 3'b000; //and
-                end
-                6'b100101: begin    //OR
-                    alucontrol <= 3'b001; //or
-                end
-                6'b101010: begin    //SLT
-                    alucontrol <= 3'b111; //slt
-                    hassign <= 1'b1;    
-                end
-                6'b101011: begin    //SLTU
-                    alucontrol <= 3'b111; //slt
-                end
-                6'b011000: begin    //MULT
-                    alucontrol <= 3'b100; //mult
-                    hassign <= 1'b1;
-                    hilo_en <= 2'b11;
-                end
-                6'b011001:begin     //MULTU
-                    alucontrol <= 3'b100; //mult
-                    hilo_en <= 2'b11;
-                end
-                6'b010000:begin     //MFHI
-                    alucontrol <= 3'b000; //ä¸åšè®¡ç®—
-                    hilo_mf <= 2'b01;
-                end
-                6'b010010:begin     //MFLO
-                    alucontrol <= 3'b000; //ä¸åšè®¡ç®—
-                    hilo_mf <= 2'b00;      
-                end
-                6'b010001:begin     //MTHI
-                    alucontrol <= 3'b000;
-                    hilo_en <= 2'b01;
-                end
-                6'b010011:begin     //MTLO
-                    alucontrol <= 3'b000;
-                    hilo_en <= 2'b00;
-                end
-                6'b011010:begin     //DIV
-                    alucontrol <= 3'b000;
-                    div <= 1'b1;
-                    hassign <= 1'b1;
-                end
-                6'b011011:begin     //DIVU
-                    alucontrol <= 3'b000;
-                    div <= 1'b1;
-                    hassign <= 1'b0;
-                end
-                default: begin 
-                    alucontrol <= 3'b000;
-                end
+				6'b100000:alucontrol <= 3'b010; //add
+				6'b100010:alucontrol <= 3'b110; //sub
+				6'b100100:alucontrol <= 3'b000; //and
+				6'b100101:alucontrol <= 3'b001; //or
+				6'b101010:alucontrol <= 3'b111; //slt
+				6'b000000:alucontrol <= 3'b010; //sll (ÓÃADD£¬ÅäºÏdatapathµÄÒÆÎ»Æ÷) ¡û Ìí¼ÓÕâÐÐ
+				default:  alucontrol <= 3'b000;
 			endcase
 		endcase
 	

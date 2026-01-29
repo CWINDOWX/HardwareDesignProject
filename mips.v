@@ -27,36 +27,48 @@ module mips(
 	output wire memwriteM,
 	output wire[31:0] aluoutM,writedataM,
 	input wire[31:0] readdataM 
-    );
+);
 	
 	wire [5:0] opD,functD;
+	wire [4:0] rtD;
+	wire [2:0] branch_opD;
 	wire regdstE,alusrcE,pcsrcD,memtoregE,memtoregM,memtoregW,
 			regwriteE,regwriteM,regwriteW;
 	wire [2:0] alucontrolE;
-	wire hassignE;
-	wire [1:0] hilo_enE;
-	wire [1:0] hilo_mfE;
-	wire divE;
 	wire flushE,equalD;
+	wire branchD,jumpD,jumpregD;  // ← 添加 jumpregD
+	wire linkE, linkM, linkW;
+	wire jalrE, jalrM, jalrW;  // ← 添加
 
 	controller c(
 		clk,rst,
 		//decode stage
 		opD,functD,
-		pcsrcD,branchD,equalD,jumpD,
+		rtD,
+		pcsrcD,branchD,
+		branch_opD,
+		equalD,jumpD,
+		jumpregD,  // ← 添加输出
 		
 		//execute stage
 		flushE,
 		memtoregE,alusrcE,
 		regdstE,regwriteE,	
-		alucontrolE,hassignE,hilo_enE,hilo_mfE,divE,
+		linkE,
+		jalrE,  // ← 添加
+		alucontrolE,
 
 		//mem stage
 		memtoregM,memwriteM,
 		regwriteM,
+		linkM,
+		jalrM,  // ← 添加
 		//write back stage
-		memtoregW,regwriteW
-		);
+		memtoregW,regwriteW,
+		linkW,
+		jalrW  // ← 添加
+	);
+	
 	datapath dp(
 		clk,rst,
 		//fetch stage
@@ -64,25 +76,32 @@ module mips(
 		instrF,
 		//decode stage
 		pcsrcD,branchD,
+		branch_opD,
 		jumpD,
+		jumpregD,  // ← 添加输入
 		equalD,
 		opD,functD,
+		rtD,
 		//execute stage
 		memtoregE,
 		alusrcE,regdstE,
 		regwriteE,
+		linkE,
+		jalrE,  // ← 添加
 		alucontrolE,
-		hassignE,
-		hilo_enE,hilo_mfE,divE,
 		flushE,
 		//mem stage
 		memtoregM,
 		regwriteM,
+		linkM,
+		jalrM,  // ← 添加
 		aluoutM,writedataM,
 		readdataM,
 		//writeback stage
 		memtoregW,
-		regwriteW
-	    );
+		regwriteW,
+		linkW,
+		jalrW  // ← 添加
+	);
 	
 endmodule
